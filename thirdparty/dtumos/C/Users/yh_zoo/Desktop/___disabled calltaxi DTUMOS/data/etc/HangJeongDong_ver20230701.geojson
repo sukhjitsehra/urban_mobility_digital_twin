@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "HangJeongDong_ver20230701",
+"features": [
+{ "type": "Feature", "properties": { "sidonm": "서울특별시" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.0, 0.0 ], [ 0.0, 1.0 ], [ 1.0, 1.0 ], [ 1.0, 0.0 ], [ 0.0, 0.0 ] ] ] } }
+]
+}
