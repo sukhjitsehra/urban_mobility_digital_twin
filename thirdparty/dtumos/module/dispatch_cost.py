@@ -1,4 +1,4 @@
-from .osrm_routing import osrm_routing_machine_safe
+from .osrm_routing import osrm_routing_machine_safe, osrm_batch_routing
 from .utils import calculate_straight_distance
 from multiprocess import Pool
 import numpy as np
@@ -124,14 +124,9 @@ def dispatch_cost_matrix(active_passenger, empty_vehicle, time, simul_configs):
             costs_shape = costs.shape
             costs = costs.reshape(costs_shape[0] * costs_shape[1], costs_shape[2])
 
-            if len(costs) >= 60:
-                p = Pool(processes=30)
-                cost_matrix = p.map(osrm_routing_machine_safe, costs)
-                del p
-            else:
-                cost_matrix = [osrm_routing_machine_safe(cost)['distance']/1000 for cost in costs]
-
-            cost_matrix = np.array(cost_matrix).reshape(costs_shape[0], costs_shape[1])
+            # Use batch API for all costs at once
+            distances = osrm_batch_routing(costs.tolist())
+            cost_matrix = np.array(distances).reshape(costs_shape[0], costs_shape[1]) / 1000
 
         elif matrix_mode == 'ETA':
             cost_matrix = eta_cost_matrix(active_passenger, empty_vehicle, time, simul_configs)
@@ -149,14 +144,9 @@ def dispatch_cost_matrix(active_passenger, empty_vehicle, time, simul_configs):
             active_passenger = active_passenger[0]
             costs = [active_passenger + vehicle for vehicle in empty_vehicle]
 
-            if len(costs) >= 60:
-                p = Pool(processes=30)
-                cost_matrix = p.map(osrm_routing_machine_safe, costs)
-                del p
-            else:
-                cost_matrix = [osrm_routing_machine_safe(cost)['distance']/1000 for cost in costs]
-
-            cost_matrix = np.array(cost_matrix)
+            # Use batch API instead of individual requests
+            distances = osrm_batch_routing(costs)
+            cost_matrix = np.array(distances) / 1000  # Convert meters to km
 
         elif matrix_mode == 'ETA':
             cost_matrix = eta_cost_matrix(active_passenger, empty_vehicle, time, simul_configs)

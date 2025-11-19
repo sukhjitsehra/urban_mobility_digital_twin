@@ -120,6 +120,11 @@ class Simulator:
         save_path = self.save_folder
         print(f"[Simulator] Saving simulation results to {save_path}")
         self.simulation_record.to_csv(save_path / 'record.csv', index=False)
-        save_json_data(self.passengers, save_path, 'passenger_marker')
-        save_json_data(self.trips, save_path, 'trip')
+
+        # Convert DataFrames to list of dicts for JSON serialization
+        passengers_list = self.passengers.to_dict('records') if isinstance(self.passengers, pd.DataFrame) else self.passengers
+        trips_list = self.trips.to_dict('records') if isinstance(self.trips, pd.DataFrame) else self.trips
+
+        save_json_data(passengers_list, save_path, 'passenger_marker')
+        save_json_data(trips_list, save_path, 'trip')
         print("[Simulator] Simulation completed and results saved successfully!")
