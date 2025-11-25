@@ -1,5 +1,5 @@
 import ollama
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 MODEL = "llama3.1"
 MAX_TURNS = 3
@@ -47,14 +47,6 @@ CONTINUE: <blocking topic>
 
 AGENT_SEQUENCE = ["designer", "advocate", "developer"]
 
-EXAMPLE_INPUTS = {
-    "travel_patterns": "East-west commuter surge mornings; nighttime trips clustering around hospital",
-    "osrm_obstacles": "Steep ramps near Itaewon, limited curb space in Jongno",
-    "budget_notes": "Capex 12B KRW over 2 years, prefer public-private mix",
-    "equity_requests": "Prioritize wheelchair ramps near clinics and add EV chargers near social housing",
-}
-
-
 def run_agent(agent_name, **kwargs):
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATES[agent_name]).format(**kwargs)
     print(f"\n[{agent_name.upper()}]\n", end="")
@@ -100,5 +92,11 @@ def run_charrette(
         turns += 1
 
 
+## Example run
 if __name__ == "__main__":
-    run_charrette(**EXAMPLE_INPUTS)
+    run_charrette(
+        travel_patterns="East-west commuter surge mornings; nighttime trips clustering around hospital",
+        osrm_obstacles="Steep ramps near Itaewon, limited curb space in Jongno",
+        budget_notes="Capex 12B KRW over 2 years, prefer public-private mix",
+        equity_requests="Prioritize wheelchair ramps near clinics and add EV chargers near social housing",
+    )

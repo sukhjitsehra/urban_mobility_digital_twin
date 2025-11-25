@@ -51,15 +51,6 @@ CONTINUE: <missing work>
 
 AGENT_SEQUENCE = ["planner", "citizen", "budget"]
 
-EXAMPLE_INPUTS = {
-    "policy_levers": "5k KRW off-peak subsidy, CBD congestion fee, expanded wheelchair service radius",
-    "stakeholder_positions": "Planners favor congestion fee, citizen group wary of surcharges, budget wants net neutral",
-    "dispatch_metrics": "Baseline wait 9.2 min, subsidy scenario 7.8 min, congestion fee raises revenue by 6%",
-    "simulation_summary": "Scenario_042 shows 4% ridership gain but 2% budget shortfall",
-    "budget_guardrails": "Annual pilot must stay within 1.5B KRW new spend",
-}
-
-
 def run_agent(agent_name, **kwargs):
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATES[agent_name]).format(**kwargs)
     print(f"\n[{agent_name.upper()}]\n", end="")
@@ -107,5 +98,12 @@ def run_policy_lab(
         turns += 1
 
 
+## Example run
 if __name__ == "__main__":
-    run_policy_lab(**EXAMPLE_INPUTS)
+    run_policy_lab(
+        policy_levers="5k KRW off-peak subsidy, CBD congestion fee, expanded wheelchair service radius",
+        stakeholder_positions="Planners favor congestion fee, citizen group wary of surcharges, budget wants net neutral",
+        dispatch_metrics="Baseline wait 9.2 min, subsidy scenario 7.8 min, congestion fee raises revenue by 6%",
+        simulation_summary="Scenario_042 shows 4% ridership gain but 2% budget shortfall",
+        budget_guardrails="Annual pilot must stay within 1.5B KRW new spend",
+    )

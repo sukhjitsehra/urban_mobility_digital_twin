@@ -1,5 +1,5 @@
 import ollama
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 MODEL = "llama3.1"
 MAX_TURNS = 3
@@ -44,15 +44,6 @@ CONTINUE: <what is missing>
 }
 
 AGENT_SEQUENCE = ["dispatcher", "finance"]
-
-EXAMPLE_INPUTS = {
-    "trip_request": "ID 8821, wheelchair passenger, pickup in Mapo at 08:05 needing hospital drop-off",
-    "fleet_state": "Vehicle T17 finishing trip in Yongsan, T04 deadheading near Mapo, fuel OK",
-    "routing_snapshot": "OSRM fastest path 11 min via Hangang-daero; tolled alternative adds 3 min but higher fare",
-    "negotiation_goal": "Keep pickup under 12 minutes while maintaining >=8% margin",
-    "risk_tolerance": "balanced",
-}
-
 
 def run_agent(agent_name, **kwargs):
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATES[agent_name]).format(**kwargs)
@@ -101,5 +92,12 @@ def run_negotiation(
         turns += 1
 
 
+## Example run
 if __name__ == "__main__":
-    run_negotiation(**EXAMPLE_INPUTS)
+    run_negotiation(
+        trip_request="ID 8821, wheelchair passenger, pickup in Mapo at 08:05 needing hospital drop-off",
+        fleet_state="Vehicle T17 finishing trip in Yongsan, T04 deadheading near Mapo, fuel OK",
+        routing_snapshot="OSRM fastest path 11 min via Hangang-daero; tolled alternative adds 3 min but higher fare",
+        negotiation_goal="Keep pickup under 12 minutes while maintaining >=8% margin",
+        risk_tolerance="balanced",
+    )

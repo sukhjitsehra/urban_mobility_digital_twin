@@ -1,5 +1,5 @@
 import ollama
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 MODEL = "llama3.1"
 MAX_TURNS = 3
@@ -48,15 +48,6 @@ CONTINUE: <gap>
 
 AGENT_SEQUENCE = ["marketing", "operations", "citizen"]
 
-EXAMPLE_INPUTS = {
-    "pricing_goal": "Hit +5% revenue without exceeding 9 min average wait",
-    "marketing_focus": "Frame shared rides as climate-friendly while keeping VIP tier",
-    "operations_limits": "Fleet maxes out at 120 concurrent trips; surge >1.6x triggers cancellations",
-    "dashboard_snapshot": "Need tiles showing wait time distribution and revenue bands",
-    "citizen_feedback": "Worried about price spikes for medical trips; want advance notice",
-}
-
-
 def run_agent(agent_name, **kwargs):
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATES[agent_name]).format(**kwargs)
     print(f"\n[{agent_name.upper()}]\n", end="")
@@ -104,5 +95,12 @@ def run_pricing_table(
         turns += 1
 
 
+## Example run
 if __name__ == "__main__":
-    run_pricing_table(**EXAMPLE_INPUTS)
+    run_pricing_table(
+        pricing_goal="Hit +5% revenue without exceeding 9 min average wait",
+        marketing_focus="Frame shared rides as climate-friendly while keeping VIP tier",
+        operations_limits="Fleet maxes out at 120 concurrent trips; surge >1.6x triggers cancellations",
+        dashboard_snapshot="Need tiles showing wait time distribution and revenue bands",
+        citizen_feedback="Worried about price spikes for medical trips; want advance notice",
+    )

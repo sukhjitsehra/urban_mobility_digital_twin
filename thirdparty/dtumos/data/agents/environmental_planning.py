@@ -1,5 +1,5 @@
 import ollama
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 MODEL = "llama3.1"
 MAX_TURNS = 3
@@ -47,14 +47,6 @@ CONTINUE: <remaining issue>
 
 AGENT_SEQUENCE = ["fleet", "energy", "watchdog"]
 
-EXAMPLE_INPUTS = {
-    "emissions_goal": "Cut CO2e by 12% this quarter while keeping service levels",
-    "vehicle_usage": "38% of trips still diesel vans; EV fleet idle midday",
-    "energy_constraints": "Grid prefers charging after 22:00; max 4 fast chargers in Gangnam",
-    "compliance_notes": "Watchdog flagged missing telemetry for 5 vehicles in last audit",
-}
-
-
 def run_agent(agent_name, **kwargs):
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATES[agent_name]).format(**kwargs)
     print(f"\n[{agent_name.upper()}]\n", end="")
@@ -100,5 +92,11 @@ def run_environmental_board(
         turns += 1
 
 
+## Example run
 if __name__ == "__main__":
-    run_environmental_board(**EXAMPLE_INPUTS)
+    run_environmental_board(
+        emissions_goal="Cut CO2e by 12% this quarter while keeping service levels",
+        vehicle_usage="38% of trips still diesel vans; EV fleet idle midday",
+        energy_constraints="Grid prefers charging after 22:00; max 4 fast chargers in Gangnam",
+        compliance_notes="Watchdog flagged missing telemetry for 5 vehicles in last audit",
+    )

@@ -1,5 +1,5 @@
 import ollama
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 MODEL = "llama3.1"
 MAX_TURNS = 3
@@ -47,14 +47,6 @@ CONTINUE: <blocker>
 
 AGENT_SEQUENCE = ["logistics", "transit", "rideshare"]
 
-EXAMPLE_INPUTS = {
-    "city_pairing": "Seoul-Incheon airport corridor with feeder buses",
-    "transfer_metrics": "Current transfer wait 14 min avg; missed connections 11% during storms",
-    "integration_constraints": "Metro API rate limits, limited curb access at Terminal 1",
-    "payment_expectations": "Logistics wants minimum revenue floor; transit agency insists on tap-to-pay parity",
-}
-
-
 def run_agent(agent_name, **kwargs):
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATES[agent_name]).format(**kwargs)
     print(f"\n[{agent_name.upper()}]\n", end="")
@@ -100,5 +92,11 @@ def run_coordination(
         turns += 1
 
 
+## Example run
 if __name__ == "__main__":
-    run_coordination(**EXAMPLE_INPUTS)
+    run_coordination(
+        city_pairing="Seoul-Incheon airport corridor with feeder buses",
+        transfer_metrics="Current transfer wait 14 min avg; missed connections 11% during storms",
+        integration_constraints="Metro API rate limits, limited curb access at Terminal 1",
+        payment_expectations="Logistics wants minimum revenue floor; transit agency insists on tap-to-pay parity",
+    )

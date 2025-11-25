@@ -1,5 +1,5 @@
 import ollama
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 MODEL = "llama3.1"
 MAX_TURNS = 3
@@ -48,15 +48,6 @@ CONTINUE: <gap>
 
 AGENT_SEQUENCE = ["commander", "hospital", "mayor_staff"]
 
-EXAMPLE_INPUTS = {
-    "incident_report": "Chemical spill near Jongno 3-ga at 17:10, 3 blocked intersections",
-    "road_status": "OSRM shows closures on Jong-ro, detour adds 6 min via Insadong",
-    "resource_status": "Hospitals A/B at 70% capacity, 8 social workers free, 15 accessible vans",
-    "support_requests": "12 dialysis passengers stuck downtown needing reroute",
-    "mayor_priority": "Protect vulnerable riders, reopen transit spine within 45 min",
-}
-
-
 def run_agent(agent_name, **kwargs):
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATES[agent_name]).format(**kwargs)
     print(f"\n[{agent_name.upper()}]\n", end="")
@@ -104,5 +95,12 @@ def run_incident_room(
         turns += 1
 
 
+## Example run
 if __name__ == "__main__":
-    run_incident_room(**EXAMPLE_INPUTS)
+    run_incident_room(
+        incident_report="Chemical spill near Jongno 3-ga at 17:10, 3 blocked intersections",
+        road_status="OSRM shows closures on Jong-ro, detour adds 6 min via Insadong",
+        resource_status="Hospitals A/B at 70% capacity, 8 social workers free, 15 accessible vans",
+        support_requests="12 dialysis passengers stuck downtown needing reroute",
+        mayor_priority="Protect vulnerable riders, reopen transit spine within 45 min",
+    )

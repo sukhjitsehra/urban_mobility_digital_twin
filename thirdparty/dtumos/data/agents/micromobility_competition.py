@@ -1,5 +1,5 @@
 import ollama
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 MODEL = "llama3.1"
 MAX_TURNS = 3
@@ -51,14 +51,6 @@ CONTINUE: <blocking issue>
 
 AGENT_SEQUENCE = ["operator_a", "operator_b", "regulator"]
 
-EXAMPLE_INPUTS = {
-    "demand_hotspots": "Yeouido brunch corridor, Gangnam night riders, Mapo campus connectors",
-    "ridership_logs": "Avg wait 6.5 min evenings, scooters idle 28% on weekdays",
-    "accessibility_requirements": "Ramps within 50m of stations, audible alerts in CBD",
-    "regulator_focus": "Prefer voluntary data sharing, warnings before fines this quarter",
-}
-
-
 def run_agent(agent_name, **kwargs):
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATES[agent_name]).format(**kwargs)
     print(f"\n[{agent_name.upper()}]\n", end="")
@@ -104,5 +96,11 @@ def run_competition(
         turns += 1
 
 
+## Example run
 if __name__ == "__main__":
-    run_competition(**EXAMPLE_INPUTS)
+    run_competition(
+        demand_hotspots="Yeouido brunch corridor, Gangnam night riders, Mapo campus connectors",
+        ridership_logs="Avg wait 6.5 min evenings, scooters idle 28% on weekdays",
+        accessibility_requirements="Ramps within 50m of stations, audible alerts in CBD",
+        regulator_focus="Prefer voluntary data sharing, warnings before fines this quarter",
+    )
