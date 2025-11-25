@@ -129,3 +129,8 @@ webencodings==0.5.1
 websocket-client==1.8.0
 widgetsnbextension==4.0.14
 xyzservices==2025.4.0
+
+#agent reqs
+ollama
+langchain
+langchain_community # if we wnat future RAG support
