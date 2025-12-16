@@ -1,0 +1,153 @@
+Architecture
+Use structured output (https://ollama.com/blog/structured-outputs) so agents can provide inputs for given functions along with the command that will trigger a run of it.
+For example, if the Dispatcher Agent wants to find the ETA from osrm_routing.py -> osrm_routing_machine_safe, it can return “True” in a field called get_ETA in its structured output, and then we can do a conditional check after the inference, and if get_ETA = “True”, we run the DTUMOS function with the values from the other structured output fields and return the ETA to the model for judgment.
+Set up how we want the scenario flow to work (ie. Dispatcher Agent gets the ETA for the requested rides, then communicates with Finance Agent and dispatches the ones that are profitable?)
+Multi-Agent System for DTUMOS Simulation & Analysis
+Agent Architecture
+Agent 1: Data Curator
+Goal: Load and shape simulation inputs for the chosen scenario
+Responsibilities:
+Extract and prepare input data using extract_main from module/services/disabled_callTaxi/extract_data.py
+Alternatively, use get_preprocessed_seoul_data if passenger/vehicle CSVs already exist
+Configure base simulation parameters via base_configs from module/simulator_helper.py:
+time_range – simulation time window
+matrix_mode – routing cost calculation method
+dispatch_mode – dispatch algorithm selection
+fail_time – maximum wait time threshold
+add_board_time – boarding time buffer
+Output to Panel:
+Ready-to-use configs object
+Passenger and vehicle DataFrames
+
+Agent 2: Ops Simulator
+Goal: Execute DTUMOS simulation with current configuration
+Responsibilities:
+Instantiate and run Simulator from module/simulator.py
+Option A: Simulator(configs=…, raw_data=operation_record).run()
+Option B: Initialize with pre-prepared passengers/vehicles
+Generate simulation artifacts and summary statistics
+Output to Panel:
+Paths to run artifacts:
+record.csv – timestamped system state
+passenger_marker.json – passenger journey markers
+trip.json – completed trip records
+vehicle_marker.json – vehicle state tracking
+Summary statistics:
+Failure counts
+Vehicle utilization rates
+System performance metrics
+
+Agent 3: Supply–Demand Analyst
+Goal: Quantify imbalance and service quality from simulation outputs
+Responsibilities:
+Analyze record.csv for:
+waiting_passenger_cnt – demand queue depth
+fail_passenger_cnt – unserved requests
+empty_vehicle_cnt – idle supply
+driving_vehicle_cnt – active supply
+Extract from trip.json:
+Trip duration distributions
+Vehicle reuse patterns
+Parse passenger_marker.json for failure modes
+Key Metrics to Surface:
+Service Quality: Failure rate, average/percentile waiting times
+Efficiency: Idle vs. in-service ratio by hour
+Capacity Planning: Peak-hour gaps, pickup density vs. vehicle starts
+Temporal Patterns: Hour-by-hour imbalance indicators
+
+Agent 4: Intervention Planner
+Goal: Propose optimization levers and execute what-if scenarios
+Responsibilities:
+Modify configuration parameters:
+Fleet Sizing: Adjust vehicle count via taxi_schedule
+Demand Scaling: Tune passenger_increase_ratio
+Dispatch Logic: Switch between optimization and in_order modes
+Routing: Toggle matrix_mode (ETA vs. street_distance)
+Service Policy: Adjust time_range or fail_time thresholds
+Trigger re-runs via Ops Simulator with modified configs
+Output:
+Ranked intervention proposals with expected impact:
+"+10% vehicles during peak hours (7-10 AM)"
+"Switch to optimization dispatch"
+"Lower fail_time threshold to 15 minutes"
+
+Agent 5: Orchestrator/Challenger
+Goal: Maintain disciplined experimental loop (inspired by reference paper methodology)
+Responsibilities:
+Track active hypotheses about supply/demand imbalances
+Request targeted simulations and tests from other agents
+Challenge Intervention Planner proposals: "Prove it with a run"
+Assess confidence levels and convergence
+Decide when to commit to final recommendations
+Behaviors:
+Requests specific metrics from Analyst before authorizing new runs
+Maintains experimental log of hypotheses → tests → results
+Enforces stopping criteria when uncertainty is sufficiently reduced
+
+Conversation Flow
+Mirrors the paper's stepwise experimental loop
+Phase 1: Baseline Establishment
+Data Curator posts baseline configuration and inputs
+
+
+Seoul OSRM data ready
+Initial time_range, matrix_mode, dispatch_mode set
+Ops Simulator executes Run 0
+
+
+Posts artifact paths
+Provides quick summary statistics
+Phase 2: Analysis & Diagnosis
+Supply–Demand Analyst reports initial findings:
+Imbalance patterns (spatial and temporal)
+Cost-to-serve signals:
+Failure rate breakdown
+Wait time distributions
+Idle/in-service ratios by hour
+Peak demand windows
+Phase 3: Iterative Experimentation
+Orchestrator/Challenger requests targeted tests:
+
+
+"Rerun with +15% vehicles during 7-10 AM window"
+"Switch to optimization dispatch and measure impact"
+Continues until uncertainty is acceptably low
+Intervention Planner proposes and triggers re-runs:
+
+
+Modifies configs based on Orchestrator requests
+Coordinates with Ops Simulator for execution
+Phase 4: Convergence & Recommendation
+After 2-3 iterations, Orchestrator finalizes:
+Diagnosis: "Peak-hour undersupply in Zone X"
+Recommended Plan:
+Fleet bump specification
+Dispatch mode optimization
+fail_time adjustment
+Supporting Metrics: Before/after comparison tables
+
+Function Reference Guide
+Configuration Management
+base_configs in module/simulator_helper.py
+Adjust: path, additional_path, time_range, fail_time, dispatch_mode, matrix_mode
+Data Extraction
+extract_main in module/services/disabled_callTaxi/extract_data.py
+get_preprocessed_seoul_data in module/simulator_helper.py (Seoul-specific helper)
+Simulation Execution
+Simulator class in module/simulator.py
+Method: .run()
+Dispatch System (for Planner mode toggles)
+dispatch_main in module/services/disabled_callTaxi/dispatch_flow.py
+dispatch_cost_matrix in module/dispatch_cost.py
+ortools_dispatch / in_order_dispatch in module/dispatch.py
+Routing Services
+osrm_batch_routing in module/osrm_routing.py
+osrm_routing_machine_safe in module/osrm_routing.py
+Progress Tracking & Output
+checking_progress in module/simulator_helper.py
+save_json_data in module/utils.py
+
+
+Notes for Seoul scenario
+- Ensure local OSRM (http://127.0.0.1:5000) is running with the Seoul .osrm files under data/osrm/.
+- Default time_range is minutes from day start; adjust to cover the peak you care about (e.g., 360–1440 = 6:00–24:00).
