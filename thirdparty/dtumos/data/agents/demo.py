@@ -1,5 +1,5 @@
 import ollama
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 import os
 import shutil
 
@@ -10,7 +10,7 @@ Data2: {data2}
 
 And so on and so forth.
 """
-MODEL = 'llama3.1'
+MODEL = 'llama3.1:latest'
 
 def inference():
     response = ollama.chat(
