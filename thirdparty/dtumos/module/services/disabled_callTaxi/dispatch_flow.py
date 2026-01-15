@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from module.osrm_routing import osrm_routing_machine_safe
+from module.osrm_routing import osrm_routing_machine_safe, osrm_batch_table
 from module.utils import save_json_data
 
 
