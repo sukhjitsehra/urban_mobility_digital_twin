@@ -1,4 +1,4 @@
-from .osrm_routing import osrm_routing_machine_safe
+from .osrm_routing import osrm_routing_machine_safe, osrm_batch_table
 from .utils import calculate_straight_distance
 from multiprocess import Pool
 import numpy as np
@@ -71,11 +71,12 @@ def eta_cost_matrix(active_passenger, empty_vehicle, time, simul_configs):
             eta_inputData_for_cost_matrix['alight_lon'].values
         )
 
-        # Use safe OSRM wrapper
-        osrm_rs = [
-            osrm_routing_machine_safe([row['ride_lat'], row['ride_lon'], row['alight_lat'], row['alight_lon']])
+        # BATCH OPTIMIZATION: Use batch API instead of individual calls
+        coords_list = [
+            [row['ride_lat'], row['ride_lon'], row['alight_lat'], row['alight_lon']]
             for _, row in eta_inputData_for_cost_matrix.iterrows()
         ]
+        osrm_rs = osrm_batch_table(coords_list)
         eta_inputData_for_cost_matrix['osrm_distance'] = [rs['distance']/1000 for rs in osrm_rs]
 
         eta_inputData_for_cost_matrix = eta_inputData_for_cost_matrix[
@@ -124,14 +125,13 @@ def dispatch_cost_matrix(active_passenger, empty_vehicle, time, simul_configs):
             costs_shape = costs.shape
             costs = costs.reshape(costs_shape[0] * costs_shape[1], costs_shape[2])
 
+            # BATCH OPTIMIZATION: Use batch API instead of Pool
+            batch_results = osrm_batch_table(costs.tolist())
+            # Pool returned full dicts when len >= 60, only extracted distance when < 60
             if len(costs) >= 60:
-                p = Pool(processes=30)
-                cost_matrix = p.map(osrm_routing_machine_safe, costs)
-                del p
+                cost_matrix = np.array(batch_results).reshape(costs_shape[0], costs_shape[1])
             else:
-                cost_matrix = [osrm_routing_machine_safe(cost)['distance']/1000 for cost in costs]
-
-            cost_matrix = np.array(cost_matrix).reshape(costs_shape[0], costs_shape[1])
+                cost_matrix = np.array([r['distance']/1000 for r in batch_results]).reshape(costs_shape[0], costs_shape[1])
 
         elif matrix_mode == 'ETA':
             cost_matrix = eta_cost_matrix(active_passenger, empty_vehicle, time, simul_configs)
@@ -149,14 +149,13 @@ def dispatch_cost_matrix(active_passenger, empty_vehicle, time, simul_configs):
             active_passenger = active_passenger[0]
             costs = [active_passenger + vehicle for vehicle in empty_vehicle]
 
+            # BATCH OPTIMIZATION: Use batch API instead of Pool
+            batch_results = osrm_batch_table(costs)
+            # Pool returned full dicts when len >= 60, only extracted distance when < 60
             if len(costs) >= 60:
-                p = Pool(processes=30)
-                cost_matrix = p.map(osrm_routing_machine_safe, costs)
-                del p
+                cost_matrix = np.array(batch_results)
             else:
-                cost_matrix = [osrm_routing_machine_safe(cost)['distance']/1000 for cost in costs]
-
-            cost_matrix = np.array(cost_matrix)
+                cost_matrix = np.array([r['distance']/1000 for r in batch_results])
 
         elif matrix_mode == 'ETA':
             cost_matrix = eta_cost_matrix(active_passenger, empty_vehicle, time, simul_configs)

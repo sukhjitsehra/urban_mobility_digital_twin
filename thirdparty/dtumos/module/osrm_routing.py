@@ -105,7 +105,7 @@ def osrm_routing_machine_safe(OD_coords):
 
 
 #######################
-# BATCH OPTIMIZATION  #
+# BATCH and PARALELL OPTIMIZATION #
 #######################
 def osrm_batch_table(coordinates_list):
     """
@@ -119,7 +119,7 @@ def osrm_batch_table(coordinates_list):
         List of dicts matching osrm_routing_machine_safe output format:
         [{'distance': meters, 'duration': minutes}, ...]
     """
-    # Chunk into batches of CHUNK_SIZE OD pairs (1000 coordinates)
+    # Chunk into batches of CHUNK_SIZE OD pairs (n coordinates)
     CHUNK_SIZE = 50
     MAX_WORKERS = 10  # Match OSRM --threads=10
     if len(coordinates_list) > CHUNK_SIZE:
@@ -129,8 +129,6 @@ def osrm_batch_table(coordinates_list):
             chunks.append(coordinates_list[i:i + CHUNK_SIZE])
 
         num_workers = min(len(chunks), MAX_WORKERS)
-        print(f"[OSRM Batch] Chunking {len(coordinates_list)} OD pairs into {len(chunks)} batches, processing {num_workers} in parallel")
-
         # Process chunks in parallel
         results_by_index = {}
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
