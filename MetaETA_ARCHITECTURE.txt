@@ -1,0 +1,493 @@
+================================================================================
+MetaETA — FINAL ARCHITECTURE AND DESIGN RATIONALE
+================================================================================
+Date: 2026-06-12
+Owner: mubarak-exe
+
+This document records (1) the problem, (2) every approach we tried and exactly
+why each failed, (3) the realisation that survived, and (4) the final decided
+architecture with inputs/outputs at every stage. It is written so anyone can see
+HOW we arrived here, not just the end result.
+
+Terms used throughout (fixed, no synonyms):
+  sp_actual   = MEASURED speed ratio of a link = link_len / (link_travel_time_s * vff)
+  sp_hat      = PREDICTED speed ratio of a link
+  vff         = free-flow speed of a link (from the OSM map)
+  observed link   = a link that one of the few available trips drove (we have its sp_actual)
+  unobserved link = a link no available trip drove (we must predict its sp_hat)
+  observed flag   = 1 if a link is observed, else 0
+  hidden link     = (training only) an observed link we temporarily mark unobserved
+                    so the model must predict it instead of copying it
+  support trips   = the few trips we condition on (give observed links)
+  query trips     = the trips we predict / are scored on
+  time regime     = a coarse time-of-day bucket (AM-peak / PM-peak / midday / night / weekend)
+
+
+================================================================================
+PART 1 — THE PROBLEM
+================================================================================
+A target city has NO traffic profile (the 60-dim per-link history of median/mean/
+min/max speed + vehicle counts). LinkETA was trained to consume that profile, so
+on a target it has no traffic signal and its speed ratio collapses to a free-flow-
+like guess. Result: MetaETA stuck at ~33% route MAPE, worse than baselines (~25%),
+when the goal is generalisation of ETA to ANY city with only a few trips.
+
+What the target city DOES have: its OSM map (road graph, road types, vff) and a
+HANDFUL of trips. A trip's travel time gives sp_actual on the links it drove:
+    sp_actual = link_len / (link_travel_time_s * vff)     [LinkETA.py:2525]
+So we have sp_actual on a few links, and must predict sp_hat everywhere else.
+
+
+================================================================================
+PART 2 — APPROACHES TRIED AND WHY EACH FAILED (the evidence trail)
+================================================================================
+Every richer "predict congestion from road structure" idea was tested and knocked
+down. The diagnostics (kept as _diag_*.py) are the evidence.
+
+(A) ORIGINAL MetaTraffic: a separate GNN predicts the absolute 60-dim traffic
+    profile from road structure; LinkETA consumes it.
+    Result (_diag_traffic.py, _diag_alpha.py): on chengdu the predicted SPEED had
+    z-RMSE 8.5 (source-range head) -> 1.6 (after recalibration). A z-RMSE of ~1.0
+    is what you get by predicting the plain mean, so 1.6 is WORSE than the mean —
+    negative skill. The model fell back to free-flow -> ~33% floor.
+    WHY IT FAILED: absolute per-edge speed does not transfer (cities have different
+    speed scales), and per-edge congestion is not a function of structure.
+
+(B) RESCUE PATCHES on (A): recalibrate the traffic head's output range to the
+    target; an "alpha" gate blending a source prototype with the generated traffic;
+    a prototype bank of per-cluster source traffic parameters.
+    Result: recalibration fixed the marginal RANGE but not the per-edge structure;
+    alpha=0.0 was the WORST setting (pure generator, z-RMSE 1.63); even full
+    prototype (alpha=0.88) was 1.39 — still worse than the mean. Still ~33%.
+    WHY IT FAILED: they patched the symptom (scale), not the cause (structure does
+    not determine per-edge congestion).
+
+(C) PIVOT to the speed RATIO (sp_actual = speed/vff, unitless) instead of absolute
+    speed, because a ratio is comparable across cities.
+    This was the right quantity and everything below builds on it. NOTE: sp_actual
+    is exactly what LinkETA's speed head already predicts as sp_hat — it is NOT a
+    new quantity, only a clearer way to use it.
+
+(D) ROAD-CLASS congestion number: median sp_actual per road type (fast/mid/local),
+    learned on source, applied to the target by its road types.
+    Result (_diag_classhour.py, _diag_granularity.py): beat free-flow on all three
+    targets (route MAPE vs trip_travel_time_s):
+        city      free-flow   road-class
+        chengdu     0.40        0.28
+        daegu       0.64        0.46
+        shanghai    0.49        0.29
+    Hour-of-day conditioning never helped (dropped). Granularity barely mattered
+    (global ~= 3 buckets ~= 15 types, all within ~2 points).
+    WHY IT WAS NOT ENOUGH: these are hard-derived numbers. The overall congestion
+    LEVEL is city-specific, and even the SHAPE does not transfer (_diag_shape.py):
+        city      level   fast/local ratio
+        porto     0.63        1.63
+        sf        0.67        1.39
+        chengdu   0.83        1.22
+        daegu     0.52        2.88   <- breaks the pattern
+        shanghai  0.63        1.53
+    Daegu (Asian city) behaves unlike the sources. A fixed number cannot generalise
+    to an arbitrary city (e.g. Mumbai with slow highways).
+
+(E) STRUCTURE-RICH prediction: a gradient-boosted model using road class PLUS the
+    precomputed topology (betweenness, pagerank, closeness, clustering).
+    Result (_diag_need_metatraffic.py):
+        city      road-class   class+topology(GBM)
+        chengdu     0.28           0.25
+        daegu       0.46           0.52   <- worse
+        shanghai    0.29           0.34   <- worse
+    WHY IT FAILED: more structural detail transferred WORSE on 2/3 cities. A
+    high-betweenness road means different things in different cities, so the learned
+    structure->congestion rule overfits the sources. Coarser transfers better.
+
+(F) STRUCTURAL-CLUSTER prototype transfer (the prototype bank idea, re-tested
+    properly): group links by (physical, topology) clusters, transfer per-cluster
+    congestion.
+    Result (_diag_cluster_validate.py): the structural clusters explain LESS of a
+    city's congestion variance than plain road type (e.g. chengdu 0.011 vs 0.067;
+    daegu 0.205 vs 0.385), and per-cluster congestion transfer is inconsistent
+    (chengdu correlation 0.16). Even road type explains only 7-38% of congestion.
+    WHY IT FAILED: per-cluster / per-link structural transfer is the FINEST and most
+    city-specific signal — the exact direction that does not carry over. Most
+    congestion is idiosyncratic to the link and time, not the structure.
+
+(G) ONE city-level vector ("the city's congestion regime", inferred from few trips).
+    WHY REJECTED: a single vector for the whole city is too coarse — an uptown
+    arterial and a residential street have very different congestion. It cannot
+    represent within-city variation.
+
+(H) CITY-SIMILARITY weighting (weight the source city most similar to the target).
+    Result (_diag_citysim.py): a modest ~1.5-2 MAPE upside IF you can identify the
+    similar city, but the existing city_descriptor is degenerate (cosine similarity
+    1.000 between every pair) and there are only 2 source cities. DEFERRED until a
+    working descriptor and more source cities exist.
+
+THE COMMON LESSON across A-H: congestion is only weakly and coarsely predictable
+from road STRUCTURE, and even that coarse part does not transfer cleanly between
+cities. The bulk of congestion lives in the target city's own trips.
+
+
+================================================================================
+PART 3 — THE REALISATION THAT SURVIVED (the one axis that worked)
+================================================================================
+Congestion is a NETWORK phenomenon: a jam on a corridor spreads into the links
+next to it. So an unobserved link's sp_hat can be predicted from its OBSERVED
+graph-NEIGHBOURS (the few trips' sp_actual), spread over the relation graph. This
+uses the target's OWN data, not borrowed structure, and spatial smoothness is
+universal (holds in every city).
+
+Evidence:
+  _diag_spatial.py — hide most links, predict each from its observed neighbours vs
+    from its road type (MAE of sp_actual, lower better):
+        city      from neighbours   from road type
+        chengdu       0.234            0.274
+        sf            0.141            0.177
+        shanghai      0.125            0.224
+        daegu         0.170            0.177
+    Neighbours beat road type on 9 of 10 cases — and it WORKS ON CHENGDU, where
+    every structure-based method failed (because it uses chengdu's own neighbours).
+
+  _diag_transductive.py — the end-to-end test: condition on a FEW trips, propagate,
+    predict HELD-OUT trips' travel times (route MAPE):
+        city      obs%   free-flow   road-type   PROPAGATED   oracle
+        chengdu    30%     0.40        0.31        0.29        0.28
+        daegu      30%     0.64        0.34        0.27        0.27   <- near oracle
+        shanghai   30%     0.49        0.26        0.26        0.20
+    From 10% of daegu's trips, route error drops 0.64 -> 0.28, essentially the
+    in-city ceiling. The one weak spot (shanghai at 10%, propagation 0.31 vs road-
+    type 0.26) is pure coverage: a big city with few trips leaves links far from any
+    observation — which is exactly why the LEARNED model also keeps the road
+    features as backup where propagation can't reach.
+
+CONCLUSION: predict sp_hat for the whole road network by spreading the few trips'
+observed sp_actual over the relation graph, using a LEARNED relational attention
+(so different relations spread differently: upstream/downstream carry congestion;
+u-turn/opposite do not). Then use those sp_hat values for the trips.
+
+
+================================================================================
+PART 4 — THE FINAL ARCHITECTURE (MetaETA)   [superseded in part by PART 7]
+================================================================================
+NOTE (rev 2, 2026-06-12): Stages 0-3, the losses, and the g/delta design below were
+revised after review (conceptual inconsistencies A1/A2, leakage B, over-build D,
+static relations E.3). Read PART 7 for the corrected, LEANER version. This text is
+kept verbatim as the first draft so the reasoning trail stays visible.
+One model. One heavy time-aware attention pass per time regime, then a thin
+per-trip readout. No traffic profile. No second attention. delta_l, g, and route
+calibration are KEPT.
+
+Notation: N links; relations {self, downstream, upstream, left_turn, opposite,
+right_turn, high_order, u_turn}; x_i = OSM static features (31); a time regime tau.
+
+--------------------------------------------------------------------------------
+STAGE 0 — read sp_actual from the few trips (no parameters)
+--------------------------------------------------------------------------------
+INPUT:  the few available trips (links driven, travel times, departure time)
+for each link i:
+    if some trip drove i:  o_i = median sp_actual over those trips ;  b_i = 1
+                           t_obs_i = the observation time
+    else:                  o_i = 0 ;  b_i = 0
+TRAINING ONLY: randomly mark a fraction of the observed links as HIDDEN
+               (set o_i = 0, b_i = 0) -> these become prediction targets.
+OUTPUT: o[N] (observed sp_actual, 0 elsewhere), b[N] (observed flag), t_obs[N]
+
+--------------------------------------------------------------------------------
+STAGE 1 — temporal features
+--------------------------------------------------------------------------------
+INPUT:  query regime tau ; each link's day/hour ; each observation's time
+Node temporal context per link i:
+    th_i = [ sin(2pi*hour/24), cos(2pi*hour/24),     # daily cycle
+             sin(2pi*dow/7),   cos(2pi*dow/7),        # weekly cycle
+             is_weekend ]
+Relational temporal terms for an observed neighbour j of link i:
+    dt_tod(i,j)    = circular gap between query hour and j's observation hour
+    dt_rec(i,j)    = time elapsed since j's observation (recency)
+    dow_match(i,j) = 1 if same day-of-week else 0
+OUTPUT: per-node th_i ; per-edge {dt_tod, dt_rec, dow_match}
+
+--------------------------------------------------------------------------------
+STAGE 2 — predict sp_hat for the WHOLE road network (the one heavy pass)
+          time-aware, multi-relation, multi-head attention ; run once per regime
+--------------------------------------------------------------------------------
+INPUT per link i:
+    h_i^(0) = Embed( [ x_i (OSM, 31) , o_i , b_i , th_i ] )
+    + the 8 relation adjacencies + Stage-1 temporal terms
+
+for layers l = 1..L, for head k, relation r, neighbour j in N_r(i):
+    score_ijk = ((Wq_k h_i).(Wk_k h_j))/sqrt(d_h)        # content
+              + beta_r^k                                  # per-RELATION bias (downstream strong, u-turn weak)
+              + gamma_tod^k * phi_tod(dt_tod(i,j))        # time-of-day relevance  |
+              + gamma_rec^k * phi_rec(dt_rec(i,j))        # recency relevance       | TEMPORAL heads only
+              + gamma_dow^k * dow_match(i,j)              # weekday match           |
+    alpha_ijk = softmax over j (score_ijk)
+    msg_ik    = sum_j alpha_ijk * (Wv_k h_j)
+  h_i^(l) = LayerNorm( h_i^(l-1) + Concat_k(msg_ik) * Wo )
+  h_i^(l) = LayerNorm( h_i^(l)   + FFN(h_i^(l)) )
+
+Multi-head split (learned): some heads use gamma_*=0 (pure spatial/structural),
+others use the temporal terms -> each head learns a different "which neighbour do
+I trust" rule (spatial / time-of-day / recency).
+
+Speed head (LinkETA's, applied to every link):
+    sp_hat_i = sp_max * sigmoid( w_s . h_i^(L) + b_s )     in (0, sp_max]
+
+OUTPUT: sp_hat_i for ALL links + h_i^(L) for all links (for this regime).
+        Computed ONCE per (city, regime) and reused by every trip in that regime.
+
+--------------------------------------------------------------------------------
+STAGE 3 — per-trip travel time (cheap; no second attention) ; delta_l, g KEPT
+--------------------------------------------------------------------------------
+INPUT:  a trip = links [l_1..l_L] in regime tau
+gather sp_hat_l and h_l^(L) for the route links
+    delta_l    = delta_range * tanh( residual_head(h_l^(L)) )    # per-link residual (KEPT)
+    route_repr = mean_l( h_l^(L) )
+    g          = 1 + g_range * tanh( route_calib(route_repr) )   # per-trip scale  (KEPT)
+    link_eta_l = ( len_l / ( sp_hat_l * vff_l ) ) * exp(delta_l) * g
+    trip_eta   = sum_l link_eta_l
+OUTPUT: trip_eta (predicted travel time)
+
+--------------------------------------------------------------------------------
+LOSSES — DWA over (speed, link, route) ; the EXISTING mechanism, no new losses
+--------------------------------------------------------------------------------
+    L_speed = mean over HIDDEN links of smooth_l1(sp_hat, sp_actual)   # same function
+              as today, same validity mask (on-route, true_tt>=1s, link_len>=10m,
+              not pinned); only the SET (hidden graph links) and the SOURCE of
+              sp_hat (the whole-network prediction) changed.
+    L_link  = huber_log(link_eta_l, link_travel_time_s)  over query trips
+    L_route = huber_log(trip_eta,  trip_travel_time_s)   over query trips
+    Total   = w_speed*L_speed + w_link*L_link + w_route*L_route       (DWA sets w's)
+
+NO-LEAKAGE RULE: travel times always use PREDICTED sp_hat; the speed loss is on
+HIDDEN links only. A link is never shown its own sp_actual while being predicted,
+so the model is forced to learn to predict, never to copy.
+
+
+================================================================================
+PART 5 — TRAINING AND INFERENCE
+================================================================================
+META-TRAINING (episodic):
+  repeat:
+    1. pick a source CITY; take a batch of its trips (they span many time regimes)
+    2. split support / query; randomly HIDE a fraction of observed links
+    3. group the query trips by their time regime
+    4. for EACH regime present: run Stage 2 once (sp_hat for all links in that
+       regime); predict the query trips of that regime (Stage 3)
+    5. DWA(L_speed on hidden links, L_link, L_route); backprop Stages 2+3
+  aggregate gradients across episodes/cities -> meta-update.
+  (Random hiding rotates which links are targets, so every link and the temporal
+   parameters get prediction gradient — support/query roles are randomised, not
+   fixed, so the model never cheats by copying.)
+  (Compute knob: to bound graph passes per step, sample one/few regimes per step.)
+
+INFERENCE (new target city, no traffic profile):
+  1. the few target trips give observed sp_actual on the links they drove (no hiding)
+  2. compute the ~5 regime sp_hat predictions ONCE for the city (Stage 2 per regime)
+  3. observed links: use their measured sp_actual ; unobserved links: use predicted
+     sp_hat ; 4. Stage 3 per query trip -> travel time (predictions reused per regime)
+  No retraining; one graph pass per regime, everything per-trip is gather + cheap heads.
+
+
+================================================================================
+PART 6 — WHY THIS GENERALISES (the defence)
+================================================================================
+  TRANSFERRED (learned on source cities): the PROPAGATION RULE — how congestion
+    spreads along the relations. This is physics, the same in every city.
+  FROM THE TARGET (no assumption): the sp_actual VALUES, measured from its own trips.
+So a new city's congestion is never assumed or borrowed; only the universal spread
+rule is reused, and the few trips supply the values. It is few-shot (needs a few
+trips, not zero), it adapts by CONDITIONING (a forward pass, not gradient steps on
+the few trips, so it cannot overfit them), and it needs no traffic profile.
+================================================================================
+
+
+================================================================================
+PART 7 — CORRECTED ARCHITECTURE (rev 2 — supersedes Part 4-6 where marked)
+================================================================================
+Date: 2026-06-12
+Why this exists: review of the first draft found conceptual inconsistencies (A1
+regime-agnostic observation; A2 temporal gates that contradict the evidence),
+evaluation leakage (B), over-parameterisation vs the evidence (D), and a too-static
+treatment of relation direction (E.3). The fixes below keep the surviving idea
+(Part 3) intact and make the model LEANER, not heavier. Tags [A1]..[E3] map to the
+review. Congestion level lives ONLY in sp_hat + g_tau, both sourced from the target.
+
+--------------------------------------------------------------------------------
+WHAT CHANGED, ONE LINE EACH
+--------------------------------------------------------------------------------
+  [A1] o_i is now per-REGIME: o_i[tau]. MEDIAN is removed (see "Replacing the
+       median"). A single regime-agnostic scalar could not represent "free at 6am,
+       jammed at 6pm".
+  [A2] The per-edge temporal gates (gamma_tod/rec/dow + temporal heads) are REMOVED
+       from Stage 2. Time enters ONLY by choosing which regime's observations feed
+       the pass. Matches the evidence that hour conditioning never helped; Stage 2
+       is now pure spatial-relational and far cheaper to fit on 2 source cities.
+  [A3] g and delta are made UNIVERSAL: g_tau is a TARGET-ANCHORED calibration fitted
+       to the few measured link times (not a source-learned scalar) and applied only
+       to PREDICTED links; delta is a tight, mean-zero residual on STATIC features
+       only -> it carries transferable geometry bias, never congestion level.
+  [A4] Stage 2 depth is BOUNDED and given a reachability feature + jumping-knowledge,
+       so deep propagation cannot over-smooth into a single city vector (rejected G).
+  [A5] Training Stage 3 uses MEASURED sp_actual on observed (non-hidden) links,
+       exactly like inference (removes the train/inference mismatch).
+  [B]  Evaluation fixed: causal observation->query cut; query trips scored only on
+       UNOBSERVED links; report MAPE stratified by coverage and #support trips, and
+       with/without support-route overlap.
+  [D]  A near-parameter-free diffusion model is the CONTROL the learned model must
+       beat out-of-city; redundant calendar encodings collapsed to one (regime emb).
+  [E3] OPTIONAL state-dependent relation gate (OFF by default) lets an upstream queue
+       propagate only when the neighbour is actually congested.
+
+--------------------------------------------------------------------------------
+REPLACING THE MEDIAN  [A1]
+--------------------------------------------------------------------------------
+A link can be driven by >1 trip, so Stage 2 still needs ONE value per (link, regime).
+We no longer take a global median over ALL trips. Instead:
+    O_i[tau] = the sp_actual readings of link i from trips whose time is in regime tau
+    o_i[tau] = geomean( O_i[tau] )      # GEOMETRIC (log-space) mean: ONE reading ->
+                                        # exactly its own sp_actual; several -> their
+                                        # log-space mean.  A mean, NOT a median.
+        # WHY geometric, not arithmetic: link times are heavy-tailed (stops/incidents
+        # inflate the arithmetic mean).  EVIDENCE (diag-floors, porto, ~95% coverage):
+        #   route MAPE  arithmetic-mean 0.386  vs  geo-mean 0.295  vs  median 0.295.
+        # Geo-mean matches median's robustness, stays a mean, and is consistent with
+        # the log-space link/route losses (huber_log).  Implemented in MetaETA.py
+        # build_regime_observations() as exp(mean(log sp_actual)).
+    b_i[tau] = 1 if O_i[tau] non-empty else 0
+A link observed only in ANOTHER regime stays UNOBSERVED here (b=0) and is filled by
+propagation. We never inject another regime's level as a value.
+
+--------------------------------------------------------------------------------
+STAGE 0' — read regime-specific sp_actual (no parameters)  [A1][B]
+--------------------------------------------------------------------------------
+INPUT: the few trips (links driven, per-link travel time, departure time)
+for each link i, for each regime tau present:
+    o_i[tau], b_i[tau] as above ; keep each reading's time for the causal check [B]
+TRAINING ONLY: within the chosen regime, randomly HIDE a fraction of observed links
+    (o=0, b=0) -> prediction targets. The hidden fraction is SAMPLED over a wide
+    range each step, so training spans the sparse coverage seen at inference.
+OUTPUT: o[tau][N], b[tau][N]
+
+--------------------------------------------------------------------------------
+MASKING / COVERAGE SCHEDULE (how Stage 0' decides what is observed)  [A1][A4][B]
+--------------------------------------------------------------------------------
+PRINCIPLE: train-time coverage must SPAN inference-time coverage; never fix a single
+hide fraction. Two knobs, BOTH sampled per episode (they move the same thing —
+effective coverage — because hiding p of the support == conditioning on less support):
+
+  K  (support size)  = the REAL-WORLD variable: how many trips the target has; their
+                       links become observed. Sample K so coverage (covered links / N)
+                       spans the deployment band. CALIBRATE that band by subsampling K
+                       trips on the SOURCE cities and counting covered links
+                       (e.g. ~5%..40%); do NOT pick a % a priori.
+  p  (hide fraction) = of the observed links, the fraction masked as L_speed targets.
+                       Sample p ~ U(0.3, 0.6); RE-DRAW which links each episode so
+                       every link rotates through being a target.
+
+STRONGER LEARNING = HARD-BUT-REACHABLE targets, NOT "more masking":
+  - a hidden target 1-3 hops from a remaining observation exercises PROPAGATION — this
+    is where _diag_spatial showed neighbours beat road-type (signal decays past ~3 hops)
+  - a target with NO observed neighbour in range only trains the structural fallback
+    (the A-H direction that does not transfer) -> cap how many such targets you allow
+
+DISTANCE-STRATIFIED mask (better than uniform random): aim for ~60% of hidden targets
+  within 2 hops of a remaining observation, the rest farther; reuse the hop distance
+  already computed for r_i[tau] (Stage 1').
+
+CURRICULUM: anneal from denser/easier (high K, low p) toward sparser/harder over
+  training, so basic propagation is learned before long-range / sparse propagation.
+
+SELECTION: choose the final (K-range, p-range) by HELD-OUT-CITY route MAPE vs COVERAGE
+  [B], not by training loss. The exact percentages fall out of that curve; the
+  principled parts are the SAMPLED range, the DISTANCE stratification, and selecting
+  on the held-out-city coverage curve.
+
+--------------------------------------------------------------------------------
+STAGE 1' — features (temporal demoted)  [A2][D]
+--------------------------------------------------------------------------------
+Node: regime embedding e(tau)  -> the ONE place calendar enters (replaces sin/cos
+      hour + dow + is_weekend + per-edge dow_match; the triple encoding is gone).
+Reachability: r_i[tau] = f( graph hops from link i to the nearest observed link in
+      regime tau )   [A4]   (cheap BFS over the observed set; tells the speed head
+      where propagation is trustworthy vs where to lean on static backup).
+No per-edge temporal terms. (Recency, if used, is already folded into o_i[tau].)
+OUTPUT: per-node e(tau), r_i[tau]
+
+--------------------------------------------------------------------------------
+STAGE 2' — predict sp_hat for the WHOLE network: ONE spatial-relational pass per
+           regime, NO temporal gates  [A2][A4][E3]
+--------------------------------------------------------------------------------
+INPUT per link i:
+    h_i^(0) = Embed( [ x_i (OSM,31), o_i[tau], b_i[tau], r_i[tau], e(tau) ] )
+    + the 8 relation adjacencies
+for layers l = 1..L  (L SMALL, e.g. 2-3 — bounded to avoid over-smoothing [A4]):
+  for head k, relation r, neighbour j in N_r(i):
+    score_ijk = (Wq_k h_i . Wk_k h_j)/sqrt(d_h) + beta_r^k        # content + per-relation bias
+      [E3, optional, OFF by default]
+              + log sigmoid( u_r . [ o_j[tau], b_j[tau] ] )       # weight upstream/downstream
+                                                                  # neighbours by how congested
+                                                                  # they actually are (spillback)
+    alpha_ijk = softmax over j (score_ijk) ;  msg_ik = sum_j alpha_ijk (Wv_k h_j)
+  h_i^(l) = LayerNorm( h_i^(l-1) + Concat_k(msg_ik) Wo ) ; then LayerNorm(+ FFN)
+JUMPING-KNOWLEDGE [A4]: h_i^(*) = combine( h_i^(0..L) )  (concat or max), so far links
+    keep access to their static/backup features and deep layers cannot wash them out.
+Speed head:  sp_hat_i = sp_max * sigmoid( w_s . h_i^(*) + b_s )   in (0, sp_max]
+OUTPUT: sp_hat_i[tau] for ALL links + h_i^(*) ; computed ONCE per (city, regime).
+
+--------------------------------------------------------------------------------
+STAGE 3' — per-trip travel time  [A3][A5]
+--------------------------------------------------------------------------------
+INPUT: trip = links [l_1..l_L] in regime tau
+Speed actually used per link (TRAIN == INFERENCE [A5]):
+    s_used_l = o_l[tau]  if (b_l[tau]=1 and not hidden)   # measured, when known
+               sp_hat_l  otherwise                        # predicted
+    pred_l   = 1 if the link used sp_hat else 0
+delta_l  = delta_range * tanh( residual_head( x_l_static ) )    # STATIC features ONLY,
+           delta_range ~ 0.1, mean-zero penalised -> transferable geometry bias;
+           CANNOT carry congestion level  [A3]
+base_l   = ( len_l / ( s_used_l * vff_l ) ) * exp(delta_l)
+g_tau    = TARGET-ANCHORED scale, COMPUTED ONCE per (city, regime) from the OBSERVED
+           links by comparing the predictor (sp_hat) to the measured link times  [A3]:
+               g_tau = sum_{obs i} t_meas_i
+                       / sum_{obs i} [ len_i/(sp_hat_i*vff_i) * exp(delta_i) ]
+           (a transductive bias correction; level comes from the target, not source.
+            Applied ONLY to predicted links so measured links are not re-scaled.
+            Optional tiny learned per-trip residual, mean-zero, magnitude <= 0.05.)
+link_eta_l = base_l * ( g_tau ^ pred_l )      # g_tau on predicted links only
+trip_eta   = sum_l link_eta_l
+OUTPUT: trip_eta
+
+--------------------------------------------------------------------------------
+LOSSES'  [A3][B]
+--------------------------------------------------------------------------------
+    L_speed = smooth_l1(sp_hat, sp_actual) over HIDDEN links     # same mask/policy
+    L_link  = huber_log(link_eta_l, link_tt) over query trips, UNOBSERVED links only [B]
+    L_route = huber_log(trip_eta,  trip_tt) over query trips
+    + lambda_d * mean(delta^2) + lambda_g * (per-trip g residual)^2   # keep them minimal
+    DWA sets w_speed/w_link/w_route with w_speed kept DOMINANT, so sp_hat (not delta/g)
+    carries congestion -> resolves the identifiability the review flagged. g_tau is
+    COMPUTED, not learned, so it adds no parameters and cannot overfit the sources.
+
+--------------------------------------------------------------------------------
+TRAINING / INFERENCE / EVALUATION  [A5][B][D]
+--------------------------------------------------------------------------------
+  CAUSAL CUT [B]: in every episode the support observations must PRECEDE the query
+     trips in time; nothing may use a future observation.
+  SCORING [B]: L_link and reported route MAPE count UNOBSERVED links only; report
+     MAPE stratified by (per-trip unobserved fraction) and (#support trips), and
+     separately for query routes that DO / DO NOT overlap support routes.
+  CONTROL TO BEAT [D]: a near-parameter-free graph diffusion (learned beta_r only;
+     no FFN, no temporal gates, no delta/g) on the SAME held-out cities. The learned
+     model ships only if it beats this control OUT-OF-CITY; otherwise prefer the
+     control — it cannot overfit 2 source cities.
+  INFERENCE: as Part 5, but (i) feed regime-specific o[tau], (ii) observed links use
+     MEASURED s, (iii) g_tau computed from the city's own observed links. No retrain.
+
+--------------------------------------------------------------------------------
+UPDATED DEFENCE (replaces Part 6 for g/delta)
+--------------------------------------------------------------------------------
+  TRANSFERRED (learned on source): the spatial spread rule (beta_r, attention) and
+    the STATIC geometry residual delta.
+  FROM THE TARGET (measured, never assumed): every congestion VALUE o_i[tau] AND the
+    overall level g_tau, fitted to the target's own measured link times.
+No source congestion level can reach the prediction.
+================================================================================

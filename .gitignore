@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# Meta_Learning (MetaETA) .gitignore
+#
+# Scope of the published branch: ONLY the methodology code + README + this
+# .gitignore + the remote/ setup folder. Data (~21 GB), archive, checkpoints,
+# diagnostics, papers, and tooling are intentionally excluded. Data and
+# checkpoints are hosted externally — see README "Data".
+# ---------------------------------------------------------------------------
+
+# --- Data (~21 GB; host externally) ----------------------------------------
+meta_learning_data/
+
+# --- Checkpoints (ship inside the external data bundle) --------------------
+checkpoints/
+**/ckpts_*/
+*.ckpt
+*.pt
+
+# --- Precomputed artifacts -------------------------------------------------
+*.parquet
+metatraffic_cache/
+
+# --- Archive / scratch -----------------------------------------------------
+archive/
+
+# --- Diagnostic scripts (excluded per scope) -------------------------------
+_diag_*.py
+
+# --- Dataset-specific tooling (OSRM/eval/preprocessing helpers) ------------
+tools/
+
+# --- Papers / manuscripts --------------------------------------------------
+papers/
+metaeta_paper/
+
+# --- Logs / changelog scratch ----------------------------------------------
+*.log
+CONGESTION_FACTOR_CHANGES.txt
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+*.ipynb
+.venv/
+venv/
+
+# --- Tooling / editors -----------------------------------------------------
+.claude/
+.vscode/
+.idea/
+
+# --- OS --------------------------------------------------------------------
+.DS_Store
+Thumbs.db

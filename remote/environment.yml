@@ -1,0 +1,28 @@
+# Minimal env for MetaETA training on the GPU box — ONLY the packages the code
+# imports, plus their binary-heavy geo deps (conda-forge ships GDAL/GEOS/PROJ so
+# geopandas/pyrosm "just work"). torch + PyG go through pip so the CUDA build and
+# the matching companion wheels line up. Rename `ETA_V2` below if you prefer.
+name: ETA_V2
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pandas
+  - pyarrow          # pandas read_parquet engine (traffic-profile *.parquet); not a direct import
+  - scipy
+  - scikit-learn
+  - networkx
+  - matplotlib
+  - tqdm
+  - requests
+  - geopandas
+  - shapely
+  - folium
+  - pyrosm
+  - pip:
+      - torch==2.5.1
+      - torch_geometric
+# torch_sparse + torch_scatter are installed by setup_remote.sh from the PyG
+# wheel index matched to the resolved torch+CUDA version (they need a -f URL).
