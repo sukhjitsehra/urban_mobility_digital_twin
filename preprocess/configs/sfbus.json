@@ -1,0 +1,131 @@
+{
+  "city": "sfbus",
+  "folder": "sfbus",
+  "input": {
+    "path": "trips_sfbus.parquet",
+    "row_filter": null,
+    "id_col": "TRIP_ID",
+    "start_col": "TIMESTAMP",
+    "poly_col": "poly",
+    "point_ts_col": "point_ts",
+    "tt_col": "trip_travel_time_s",
+    "interval_s": null,
+    "min_trip_time_s": null,
+    "max_trip_time_s": 10800,
+    "keep_cols": [
+      "vehicle_id"
+    ]
+  },
+  "trip_id": {
+    "hash": false,
+    "on_duplicate": "drop"
+  },
+  "area": {
+    "pbf": "norcal-latest.osm.pbf",
+    "load_bbox": null,
+    "boundary_query": {
+      "custom_filter": {
+        "boundary": [
+          "administrative"
+        ],
+        "name": [
+          "San Francisco",
+          "City and County of San Francisco",
+          "San Francisco County"
+        ],
+        "admin_level": [
+          "6",
+          "8"
+        ]
+      }
+    },
+    "name_cols": [
+      "name",
+      "name:en",
+      "official_name",
+      "alt_name",
+      "short_name",
+      "name:es",
+      "name:pt"
+    ],
+    "name_regex": "(?i)^(san francisco|city and county of san francisco|san francisco county)$",
+    "name_match": "match",
+    "admin_levels": [
+      "6",
+      "8"
+    ],
+    "fallback": "name_only",
+    "select": "union_largest_part",
+    "metric_epsg": 3310,
+    "buffer_m": 100,
+    "single_polygon": false,
+    "min_vertices": 50,
+    "coord_sys": "WGS84",
+    "swap_margin_deg": 0.001,
+    "bbox_margin_deg": 0.001,
+    "prefilter_margin_deg": 0.005,
+    "touch_ok": true,
+    "centre_box": {
+      "half_size_km": 5.0,
+      "margin_m": 100,
+      "median_of": "input"
+    }
+  },
+  "buckets": {
+    "width_min": 15,
+    "max_min": 180,
+    "seed": 42,
+    "mode": "all"
+  },
+  "visual": {
+    "tiles": "OpenStreetMap",
+    "tiles_attr": null,
+    "heatmap_on": "area",
+    "metric_epsg": 3857,
+    "step_m": 50,
+    "max_points": 2000000,
+    "radius": 8,
+    "blur": 15,
+    "zoom_start": 12,
+    "tz": null
+  },
+  "network": {
+    "network_type": "driving",
+    "load_clip": "area",
+    "filter": "intersects",
+    "clip_box": null
+  },
+  "selection": {
+    "min_trips": 1,
+    "min_days": 365,
+    "mean_minutes": [
+      0,
+      180
+    ],
+    "length_bands": [
+      3,
+      10,
+      15,
+      20,
+      30,
+      40,
+      50,
+      60
+    ],
+    "short_band_min_share": 0.0,
+    "long_band_min_trips": 0,
+    "trip_coverage_floor": 0.0,
+    "coverage_min": 0
+  },
+  "map_matching": {
+    "crs_metric": "EPSG:26910",
+    "osrm_extract": "NonTaxi_raw/osm/osrm_bus/norcal-latest.osrm",
+    "osrm_url": "http://localhost:5003",
+    "local_tz": null,
+    "dyn_align": "departure",
+    "workers_per_shard": 4,
+    "slots": 18,
+    "buf_m": 10.0,
+    "radius_m": 25.0
+  }
+}

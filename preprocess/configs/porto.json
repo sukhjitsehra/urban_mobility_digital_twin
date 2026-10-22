@@ -1,0 +1,132 @@
+{
+  "city": "porto",
+  "folder": "porto",
+  "input": {
+    "path": "train.csv",
+    "row_filter": {
+      "MISSING_DATA": false
+    },
+    "id_col": "TRIP_ID",
+    "start_col": "TIMESTAMP",
+    "poly_col": "POLYLINE",
+    "point_ts_col": null,
+    "tt_col": null,
+    "interval_s": 15,
+    "min_trip_time_s": null,
+    "max_trip_time_s": 10800,
+    "keep_cols": [
+      "CALL_TYPE",
+      "ORIGIN_CALL",
+      "ORIGIN_STAND",
+      "TAXI_ID",
+      "DAY_TYPE"
+    ]
+  },
+  "trip_id": {
+    "hash": false,
+    "on_duplicate": "drop"
+  },
+  "area": {
+    "pbf": "portugal-latest.osm.pbf",
+    "load_bbox": [
+      -8.75,
+      41.12,
+      -8.5,
+      41.25
+    ],
+    "boundary_query": {
+      "custom_filter": {
+        "boundary": [
+          "administrative"
+        ],
+        "name": [
+          "Porto",
+          "Município do Porto"
+        ]
+      }
+    },
+    "name_cols": [
+      "name",
+      "name:pt",
+      "official_name",
+      "alt_name"
+    ],
+    "name_regex": "(?i)porto",
+    "name_match": "fullmatch",
+    "admin_levels": null,
+    "fallback": null,
+    "select": "largest_candidate",
+    "metric_epsg": 3763,
+    "buffer_m": 100,
+    "single_polygon": false,
+    "min_vertices": null,
+    "coord_sys": "WGS84",
+    "swap_margin_deg": 0.001,
+    "bbox_margin_deg": 0.001,
+    "prefilter_margin_deg": 0.0,
+    "touch_ok": true,
+    "centre_box": null
+  },
+  "buckets": {
+    "width_min": 15,
+    "max_min": 180,
+    "seed": 42,
+    "mode": "target_total",
+    "target_total": 120000
+  },
+  "visual": {
+    "tiles": "OpenStreetMap",
+    "tiles_attr": null,
+    "heatmap_on": "sample",
+    "metric_epsg": 3763,
+    "step_m": 50,
+    "max_points": 2000000,
+    "radius": 6,
+    "blur": 10,
+    "zoom_start": 14,
+    "tz": null
+  },
+  "network": {
+    "network_type": "driving",
+    "load_clip": [
+      -8.75,
+      41.12,
+      -8.5,
+      41.25
+    ],
+    "filter": null,
+    "clip_box": null
+  },
+  "selection": {
+    "min_trips": 27110,
+    "min_days": 8,
+    "mean_minutes": [
+      15,
+      20
+    ],
+    "length_bands": [
+      3,
+      10,
+      15,
+      20,
+      30,
+      40,
+      50,
+      60
+    ],
+    "short_band_min_share": 0.1,
+    "long_band_min_trips": 50,
+    "trip_coverage_floor": 0.4
+  },
+  "map_matching": {
+    "crs_metric": "EPSG:3763",
+    "osrm_extract": "osrm/portugal-latest.osrm",
+    "osrm_url": "http://localhost:5005",
+    "local_tz": null,
+    "dyn_align": "departure",
+    "workers_per_shard": 4,
+    "slots": 18,
+    "buf_m": 5.0,
+    "radius_m": 20.0
+  }
+}

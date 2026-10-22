@@ -1,0 +1,36 @@
+# LinkETA — conda environment (alternative to env/requirements.txt)
+#
+# Create with:
+#   conda env create -f env/environment.yml
+#   conda activate linketa
+#
+# NOTE: torch / torch_geometric / torch_sparse are installed via pip from the
+# PyG wheel index (CUDA 11.8 build). For CPU-only or a different CUDA version,
+# edit the --find-links URL and the torch build to match — see env/SETUP.md.
+name: linketa
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  # geospatial stack is most reliable from conda-forge
+  - geopandas=1.0.1
+  - shapely=2.1.2
+  - networkx=3.2.1
+  - numpy=2.3.5
+  - pandas=2.3.3
+  - scipy=1.16.3
+  - scikit-learn=1.7.2
+  - matplotlib=3.10.7
+  - tqdm=4.67.1
+  - requests=2.32.5
+  - pip:
+      - pyrosm==0.6.2
+      - folium==0.20.0
+      - --find-links https://data.pyg.org/whl/torch-2.5.1+cu118.html
+      - torch==2.5.1
+      - torch_geometric==2.7.0
+      - torch_sparse==0.6.18
+      # Optional tree-based baselines (uncomment if running CatBoost/XGBoost):
+      # - catboost>=1.2
+      # - xgboost>=2.0

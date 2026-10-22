@@ -1,0 +1,138 @@
+{
+  "city": "daegu",
+  "folder": "daegu",
+  "input": {
+    "path": "daegu_trips.parquet",
+    "row_filter": null,
+    "id_col": "TRIP_ID",
+    "start_col": "TIMESTAMP",
+    "poly_col": "poly",
+    "point_ts_col": "point_ts",
+    "tt_col": "trip_travel_time",
+    "interval_s": 1,
+    "min_trip_time_s": null,
+    "max_trip_time_s": 10800,
+    "keep_cols": [
+      "vehicle_id"
+    ]
+  },
+  "trip_id": {
+    "hash": true,
+    "salt": "TRIP_V1",
+    "on_duplicate": "drop"
+  },
+  "area": {
+    "pbf": "south-korea-251029.osm.pbf",
+    "load_bbox": null,
+    "boundary_query": {
+      "custom_filter": {
+        "boundary": [
+          "administrative"
+        ],
+        "name": [
+          "Daegu",
+          "Daegu Metropolitan City",
+          "대구광역시",
+          "Taegu"
+        ],
+        "admin_level": [
+          "4",
+          "6",
+          "8"
+        ]
+      }
+    },
+    "name_cols": [
+      "name",
+      "name:en",
+      "name:ko",
+      "official_name",
+      "alt_name",
+      "short_name"
+    ],
+    "name_regex": "(?i)^(daegu|daegu metropolitan city|대구광역시|taegu)$",
+    "name_match": "match",
+    "admin_levels": [
+      "4",
+      "6",
+      "8"
+    ],
+    "fallback": "name_only",
+    "select": "union_largest_part",
+    "metric_epsg": 5179,
+    "buffer_m": 100,
+    "single_polygon": false,
+    "min_vertices": 50,
+    "coord_sys": "WGS84",
+    "swap_margin_deg": 0.001,
+    "bbox_margin_deg": 0.001,
+    "prefilter_margin_deg": 0.005,
+    "touch_ok": true,
+    "centre_box": {
+      "half_size_km": 5.0,
+      "margin_m": 100,
+      "median_of": "input"
+    }
+  },
+  "buckets": {
+    "width_min": 15,
+    "max_min": 180,
+    "seed": 42,
+    "mode": "all"
+  },
+  "visual": {
+    "tiles": "OpenStreetMap",
+    "tiles_attr": null,
+    "heatmap_on": "area",
+    "metric_epsg": 3857,
+    "step_m": 50,
+    "max_points": 2000000,
+    "radius": 8,
+    "blur": 15,
+    "zoom_start": 11,
+    "tz": null
+  },
+  "network": {
+    "network_type": "driving",
+    "load_clip": null,
+    "filter": "clip",
+    "clip_box": [
+      128.356,
+      35.645,
+      128.772,
+      36.023
+    ]
+  },
+  "selection": {
+    "min_trips": 28040,
+    "min_days": 8,
+    "mean_minutes": [
+      15,
+      20
+    ],
+    "length_bands": [
+      3,
+      10,
+      15,
+      20,
+      30,
+      40,
+      50,
+      60
+    ],
+    "short_band_min_share": 0.1,
+    "long_band_min_trips": 50,
+    "trip_coverage_floor": 0.4
+  },
+  "map_matching": {
+    "crs_metric": "EPSG:5179",
+    "osrm_extract": "osrm/south-korea-251029.osrm",
+    "osrm_url": "http://localhost:5007",
+    "local_tz": null,
+    "dyn_align": "departure",
+    "workers_per_shard": 4,
+    "slots": 18,
+    "buf_m": 5.0,
+    "radius_m": 10.0
+  }
+}
