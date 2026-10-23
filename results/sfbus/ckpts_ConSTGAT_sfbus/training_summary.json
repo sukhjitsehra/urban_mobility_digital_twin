@@ -1,0 +1,40 @@
+{
+  "test": {
+    "link_loss": 8.308717205296809,
+    "route_loss": 0.12511045354694578,
+    "link_mae": 9.371773207792364,
+    "link_rmse": 25.53295007342284,
+    "link_mape": 0.7596777354361893,
+    "route_mae": 319.60850934359297,
+    "route_rmse": 439.62118367688834,
+    "route_mape": 0.12511045354694578
+  },
+  "best_selector": 0.296885826992881,
+  "train_last": {
+    "link_loss": 7.24957124297955,
+    "route_loss": 0.13139363483320898,
+    "link_mae": 8.241206749665018,
+    "link_rmse": 22.762700943825674,
+    "link_mape": 0.595195647227952,
+    "route_mae": 334.9911998804065,
+    "route_rmse": 451.1074712832064,
+    "route_mape": 0.13139363483320898
+  },
+  "val_last": {
+    "link_loss": 7.905339693914265,
+    "route_loss": 0.13463922559398495,
+    "link_mae": 8.97960997467269,
+    "link_rmse": 25.53957881143731,
+    "link_mape": 0.6800876850495512,
+    "route_mae": 353.27761833852827,
+    "route_rmse": 487.7130409885262,
+    "route_mape": 0.13463922559398495
+  },
+  "epochs_run": 86,
+  "total_train_time_s": 20422.445531190024,
+  "max_peak_gpu_mb": 547.13671875,
+  "grad_norm_max_all": 699.7608642578125,
+  "grad_norm_nonfinite_all": 0,
+  "clip_norm": 1.0,
+  "patience": 15
+}

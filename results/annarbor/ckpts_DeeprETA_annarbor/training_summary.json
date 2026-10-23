@@ -1,0 +1,57 @@
+{
+  "test": {
+    "link_loss": NaN,
+    "link_mae": NaN,
+    "link_rmse": NaN,
+    "link_mape": NaN,
+    "route_loss": 86.70507049560547,
+    "route_mae": 86.70507049560547,
+    "route_rmse": 134.73025512695312,
+    "route_mape": 0.1488942801952362,
+    "n_links": 0,
+    "n_routes": 3084,
+    "re_eta_route_mae": 115.6421127319336,
+    "re_eta_route_rmse": 168.37002563476562,
+    "re_eta_route_mape": 0.18881836533546448
+  },
+  "best_val_route_mape": 0.14671140909194946,
+  "epochs_run": 17,
+  "total_train_time_s": 593.5299852659227,
+  "mean_epoch_time_s": 29.3377134599449,
+  "max_peak_gpu_mb": 44.04833984375,
+  "n_params": 1398970,
+  "batch_size": 16,
+  "norm": {
+    "sd_tt": 326.32358728977664,
+    "sd_res": 138.82206418893938,
+    "y_max": 7406.0
+  },
+  "torch": "2.5.1+cu118",
+  "grad_norm_max_all": 0.8596081733703613,
+  "grad_norm_nonfinite_all": 0,
+  "config": {
+    "LR": 0.001,
+    "OMEGA": 0.7,
+    "DELTA": 1.0,
+    "EMB_DIM": 8,
+    "N_QUANTILES": 256,
+    "HASH_BINS": 4096,
+    "GEOHASH_RES": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "HASH_SEEDS": [
+      1,
+      2
+    ],
+    "ATT_DIM": 4,
+    "FC_DIM": 2048,
+    "MIN_SPEED": 0.5,
+    "Y0_MODE": "realtime",
+    "NUM_EPOCHS": 100,
+    "PATIENCE": 15,
+    "SEED": 42
+  }
+}

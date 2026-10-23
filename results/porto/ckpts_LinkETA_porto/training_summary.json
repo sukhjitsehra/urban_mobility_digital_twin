@@ -1,0 +1,53 @@
+{
+  "test": {
+    "speed_loss": 0.1780438229389665,
+    "link_loss": 0.06747377386864815,
+    "route_loss": 0.012959602958541032,
+    "link_mae": 5.132017941750108,
+    "link_rmse": 21.152509523464065,
+    "link_mape": 0.4902224667505674,
+    "route_mae": 110.95361294789294,
+    "route_rmse": 154.47694125685706,
+    "route_mape": 0.12531772069051678,
+    "speed_mae_actual": 0.22196937227460897,
+    "vol_mae": 0.08595763558071041
+  },
+  "best_selector": 0.22506709823592608,
+  "head_mode": "speed",
+  "route_order": "enter_ts",
+  "pace_loss_beta": 0.1,
+  "r_max": 2.8,
+  "label_cap": 3.0,
+  "train_last": {
+    "speed_loss": 0.17462864102686998,
+    "link_loss": 0.06254534476903459,
+    "route_loss": 0.01230614852439657,
+    "link_mae": 5.121599810206016,
+    "link_rmse": 18.6853838343067,
+    "link_mape": 0.4888291124573896,
+    "route_mae": 110.83392710853647,
+    "route_rmse": 155.58558870740387,
+    "route_mape": 0.12391088178738038,
+    "speed_mae_actual": 0.21866565579338368,
+    "vol_mae": 0.1106148424300667
+  },
+  "val_last": {
+    "speed_loss": 0.17603581099095073,
+    "link_loss": 0.06138815292844604,
+    "route_loss": 0.011796679754579334,
+    "link_mae": 5.054691213103845,
+    "link_rmse": 18.17995154973952,
+    "link_mape": 0.4774619721307655,
+    "route_mae": 111.3512233269784,
+    "route_rmse": 152.768323069728,
+    "route_mape": 0.1215941618399003,
+    "speed_mae_actual": 0.2197541658098409,
+    "vol_mae": 0.08055321636973047
+  },
+  "epochs_run": 31,
+  "total_train_time_s": 1833.4680705560604,
+  "max_peak_gpu_mb": 2696.5927734375,
+  "grad_norm_max_all": 1.553737759590149,
+  "grad_norm_nonfinite_all": 11,
+  "clip_norm": 1.0
+}

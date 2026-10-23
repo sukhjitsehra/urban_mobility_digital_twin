@@ -1,0 +1,34 @@
+{
+  "test": {
+    "link_loss": 0.00045626044915456613,
+    "route_loss": 0.06615036441621444,
+    "official_route_mape": 17.649093229577943,
+    "link_mae": 7.2675094675050795,
+    "link_rmse": 19.28590553228034,
+    "link_mape": 0.6659139304399714,
+    "route_mae": 148.8744967028064,
+    "route_rmse": 352.676416850522,
+    "route_mape": 0.17649093250747036
+  },
+  "best_val_official_route_mape": 17.13537010572545,
+  "epochs_run": 29,
+  "total_train_time_s": 8100.189703800001,
+  "mean_epoch_time_s": 232.0256543068965,
+  "max_peak_gpu_mb": 2771.43505859375,
+  "grad_norm_max_all": 426.0148620605469,
+  "grad_norm_nonfinite_all": 0,
+  "n_params": 244132,
+  "batch_size": 16,
+  "speed_bins_kmh": [
+    9.0,
+    18.3,
+    25.1,
+    32.4,
+    43.1,
+    180.0
+  ],
+  "loss_time_unit_s": 600.0,
+  "max_length": 885,
+  "implementation": "official Leim2.py (unmodified)",
+  "torch": "1.13.1+cu117"
+}

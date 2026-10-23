@@ -1,0 +1,87 @@
+{
+  "test": {
+    "link_loss": NaN,
+    "link_mae": NaN,
+    "link_rmse": NaN,
+    "link_mape": NaN,
+    "route_loss": 225.1775665283203,
+    "route_mae": 225.1775665283203,
+    "route_rmse": 294.96160888671875,
+    "route_mape": 0.1904887706041336,
+    "n_links": 0,
+    "n_routes": 723,
+    "test_mono": 0.8737267119729001
+  },
+  "best_val_route_mae": 234.7510528564453,
+  "best_val_route_mape": 0.1819184273481369,
+  "epochs_run": 31,
+  "total_train_time_s": 2327.0740311760455,
+  "mean_epoch_time_s": 68.28538765277217,
+  "max_peak_gpu_mb": 408.3955078125,
+  "n_params": 208065,
+  "batch_size": 16,
+  "norm": {
+    "x_mean": [
+      1.2059392351363154,
+      319.34100692494854,
+      16.679490645427382,
+      0.18322336370110348,
+      0.0,
+      1.3315854026005212e-05,
+      0.5388838060384263
+    ],
+    "x_std": [
+      0.6277830952059607,
+      419.6197453808768,
+      0.9635458849492993,
+      0.30518216111336954,
+      1e-06,
+      9.921060902860613e-05,
+      0.4984867709216182
+    ],
+    "class_median": 12.0,
+    "len_max": 91,
+    "n_train_states": 1093,
+    "tt_mu": 1374.9284555244137,
+    "tt_sd": 561.7395832967893
+  },
+  "torch": "2.5.1+cu118",
+  "grad_norm_max_all": 8736.357421875,
+  "grad_norm_nonfinite_all": 0,
+  "config": {
+    "LR": 0.0001,
+    "HIDDEN": 128,
+    "DROPOUT": 0.1,
+    "SMOOTH_L1_BETA": 50.0,
+    "LAMBDA_MONO": 0.5,
+    "LAMBDA_GRID": [
+      0.0,
+      0.1,
+      0.3,
+      0.5,
+      1.0,
+      1.5
+    ],
+    "N_HOPS": 3,
+    "STATE_S": 600,
+    "FLOW_WINDOW_S": 3600,
+    "CLASS_WINDOW_S": 600,
+    "SIGNAL_RADIUS_M": 0.5,
+    "NODE_FEATURES": [
+      "num_lanes",
+      "length_m",
+      "speed_limit_mps",
+      "avg_curvature",
+      "has_traffic_signal",
+      "analytical_flow_veh_per_s",
+      "demand_class"
+    ],
+    "POS_FEATS": [
+      "length_m",
+      "avg_curvature"
+    ],
+    "NUM_EPOCHS": 100,
+    "PATIENCE": 5,
+    "SEED": 42
+  }
+}
