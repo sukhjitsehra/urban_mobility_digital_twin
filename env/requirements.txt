@@ -1,48 +1,21 @@
-# LinkETA — pip requirements (pinned)
-#
-# torch / torch_geometric / torch_sparse are built against a specific
-# PyTorch + CUDA combo (here: PyTorch 2.5 + CUDA 11.8 => "+pt25cu118").
-# The torch_sparse wheel is NOT on PyPI — install it from the PyG index:
-#
-#   pip install torch==2.5.1
-#   pip install torch_geometric==2.7.0 torch_sparse==0.6.18 \
-#       -f https://data.pyg.org/whl/torch-2.5.1+cu118.html
-#
-# For a CPU-only / different-CUDA machine, pick the matching index URL from
-# https://data.pyg.org/whl/ and the matching torch build from
-# https://pytorch.org/get-started/locally/  (see env/SETUP.md).
-#
-# Install everything else with:  pip install -r env/requirements.txt
-# (then run the torch trio commands above if the wheels below don't resolve).
-
-# --- PyG extra wheel index (used for torch_sparse) -------------------------
+--extra-index-url https://download.pytorch.org/whl/cu118
 --find-links https://data.pyg.org/whl/torch-2.5.1+cu118.html
-
-# --- Core scientific stack -------------------------------------------------
-numpy==2.3.5
-pandas==2.3.3
-scipy==1.16.3
-scikit_learn==1.7.2
-tqdm==4.67.1
-Requests==2.32.5
-
-# --- Geospatial ------------------------------------------------------------
+torch==2.5.1+cu118
+torch_geometric==2.6.1
+torch_sparse==0.6.18+pt25cu118
+numpy==2.0.2
+pandas==2.2.3
 geopandas==1.0.1
-Shapely==2.1.2
+shapely==2.0.7
+pyproj==3.6.1
+pyarrow==20.0.0
+scipy==1.13.1
+scikit-learn==1.6.1
 networkx==3.2.1
+matplotlib==3.9.4
 pyrosm==0.6.2
-folium==0.20.0
-
-# --- Plotting --------------------------------------------------------------
-matplotlib==3.10.7
-
-# --- Deep learning (see header for the PyG/CUDA note) ----------------------
-torch==2.5.1
-torch_geometric==2.7.0
-torch_sparse==0.6.18
-
-# --- Optional: tree-based baselines (CatBoost / XGBoost blocks) -------------
-# Required only if you run the CatBoost or XGBoost models/baselines.
-# Uncomment to install:
-# catboost>=1.2
-# xgboost>=2.0
+requests==2.32.4
+tqdm==4.67.1
+folium==0.19.5
+deep-forest==0.1.7
+contextily==1.6.2
